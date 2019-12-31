@@ -220,3 +220,4 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 
+infoq_cover
