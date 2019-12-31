@@ -177,7 +177,7 @@ print(type(la))
 for item in islice(la, 5, 9):  # 取下标5-9的元素
     print(item)
 ```
-但是异步生成器没有这中方法所以定义了如下方式进行分流。下面代码的作用就是每次并发`10`个。通过修改`limited_as_completed`方法的第二个参数可以设置不同的并发量。
+但是异步生成器没有这种方法，所以定义了如下方式进行分流。下面代码的作用就是每次并发`10`个。通过修改`limited_as_completed`方法的第二个参数可以设置不同的并发量。
 ```python
 async def start_branch(tasks):
     # 分流
