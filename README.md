@@ -218,7 +218,7 @@ async def bound_fetch(item, session):
     item["file_path"] = file_path
     async with sema:
         await fetch(item, session) #内容抓取部分协程
-        await get_buff(item, session) #图片抓去部分协程
+        await get_buff(item, session) #图片抓取部分协程
 ```
 ### 内容部分核心内容
 
