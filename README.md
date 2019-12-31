@@ -42,9 +42,9 @@
 
 
 ### 列表部分的代码
-因为列表页部分是一步接一步的不适合并发所以我们用`requests`模块常规的方式爬取即可。
-文件名infoq_seed_spider.py
-网络请求部分
+因为列表页部分是一步接一步的不适合并发所以我们用`requests`模块常规的方式爬取即可。文件名 `infoq_seed_spider.py`
+
+#### 网络请求部分
 
 ```python
     def get_req(self, data=None):
@@ -52,7 +52,8 @@
         if req.status_code in [200, 201]:
             return req
 ```
-数据解析部分
+#### 数据解析部分
+
 ```python
 def save_data(self, data):
         tasks = []
@@ -86,7 +87,8 @@ def save_data(self, data):
         crawler.info(f"add {len(tasks)} datas to mongodb")
         return score
 ```
-程序入口
+#### 程序入口
+
 ```python
     def start(self):
         i = 0
@@ -100,19 +102,45 @@ def save_data(self, data):
             time.sleep(random.randint(0, 5))
 
 ```
-列表页逻辑简单代码也是同步，就没有什么需要强调的地方了
-新手需要注意是访问量和频率，这里只是做一个学习范例所以请求量和请求频率相应的比较低。
+列表页逻辑简单代码也是同步，就没有什么需要强调的地方了。新手需要注意是访问量和频率，这里只是做一个学习范例所以请求量和请求频率相应的比较低。
 ###网站分析之详情部分
 这里分为两部分存储，一个是详情内容的封面我将图片保存到了本地。另外一个就是详情内容的爬取保存到数据库里，保存图片的同时获取图片的路径一起保存在数据库，方便找到文章的配图。
-### 详情页的思考
-一开始我以为详情页的内容请求类似https://www.infoq.cn/article/cY3lZj1G-cR2iJ3ONUd6链接就行了，但是后来事实证明我想简单了，详情页其实也是通过ajax加载的，经过和列表页类似的分析，发现请求链接为：https://www.infoq.cn/public/v1/article/getDetail，请求参数为 uuid,也就是详情页的链接后面的部分，我们在爬取列表页的时候已经获取了。
-也就是说详情页的爬虫我们是通过访问数据库的形式去进行爬取的，这里我们就可以做到并发去访问了。这里就让我们熟悉一下aiohttp的使用已经其他异步库的使用。
 
-###详情页的代码部分
-首先说下我们需要的包,`aiohttp`异步网络请求包,motor异步`mongodb`请求包,`aiofiles`异步文件操作包,`async_timeout`请求`timeout`设置包。以上包我们都可以通过pip进行安装，下面我们对这些包进行一一了解。
+
+
+### 详情页的思考
+
+一开始我以为详情页的内容请求类似
+
+```js
+https://www.infoq.cn/article/cY3lZj1G-cR2iJ3ONUd6
+```
+
+链接就行了，但是后来事实证明我想简单了，详情页其实也是通过ajax加载的，经过和列表页类似的分析，发现请求链接为：
+
+```js
+https://www.infoq.cn/public/v1/article/getDetail
+```
+
+请求参数为 `uuid`,也就是详情页的链接后面的部分，我们在爬取列表页的时候已经获取了。
+也就是说详情页的爬虫我们是通过访问数据库的形式去进行爬取的，这里我们就可以做到并发去访问了。这里就让我们熟悉一下`aiohttp`的使用已经其他异步库的使用。
+
+
+
+### 详情页的代码部分
+
+首先说下我们需要的包,`aiohttp`异步网络请求包,`motor`异步`mongodb`请求包,`aiofiles`异步文件操作包,`async_timeout`请求`timeout`设置包。以上包我们都可以通过pip进行安装，下面我们对这些包进行一一了解。
+
+
+
 ## 数据读取
+
 首先我们需要读取数据的数据，这里我们使用`pymongo`。
-首先是导入必备的包`pip install pymongo`安装即可。
+
+```shell
+pip install pymongo
+```
+
 读取部分没有涉及太多的操作，我们就直接获取一个生成器格式的数据即可
 
 ```python
@@ -146,9 +174,7 @@ print(type(la))
 for item in islice(la, 5, 9):  # 取下标5-9的元素
     print(item)
 ```
-但是异步生成器没有这中方法所以定义了如下方式进行分流。
-下面代码的作用就是每次并发10个。通过修改limited_as_completed
-方法的第二个参数可以设置不同的并发量。
+但是异步生成器没有这中方法所以定义了如下方式进行分流。下面代码的作用就是每次并发10个。通过修改`limited_as_completed`方法的第二个参数可以设置不同的并发量。
 ```python
 async def start_branch(tasks):
     # 分流
@@ -175,8 +201,7 @@ def limited_as_completed(coros, limit):
     while len(futures) > 0:
         yield first_to_finish(futures, coros)
 ```
-一般对于并发100万以及更大的数据量时，可以使用此方案。
-下面具体说下网络请求部分的逻辑。
+一般对于并发100万以及更大的数据量时，可以使用此方案。下面具体说下网络请求部分的逻辑。
 ## 网络请求
 这里分了两部分进行并行抓取，图片部分和详情内容部分
 ```python
@@ -192,7 +217,8 @@ async def bound_fetch(item, session):
         await fetch(item, session) #内容抓取部分协程
         await get_buff(item, session) #图片抓去部分协程
 ```
-内容部分核心内容
+### 内容部分核心内容
+
 ```python
 async def fetch(item, session, retry_index=0):
     try:
@@ -220,7 +246,8 @@ async def fetch(item, session, retry_index=0):
         retry_index += 1
         return await fetch(item, session, retry_index) 
 ```
-图片抓取部分核心内容
+### 图片抓取部分核心内容
+
 ```python
 async def get_buff(item, session):
     url = item.get("cover")
@@ -248,8 +275,7 @@ class MotorBase():
         self.client = AsyncIOMotorClient(self.motor_uri)
         self.db = self.client.spider_data
 ```
- 上面的代码可以根据是否需要用户名来创建不同的链接方式
-其中读取的配置内容格式如下
+ 上面的代码可以根据是否需要用户名来创建不同的链接方式，其中读取的配置内容格式如下
 ```python
 # 数据库基本信息
 db_configs = {
@@ -261,7 +287,8 @@ db_configs = {
     'db_name': 'spider_data'
 }
 ```
-状态修改
+#### 状态修改
+
 ```python
  async def change_status(self, uuid, item, status_code=0):
         # status_code 0:初始,1:开始下载，2下载完了
@@ -276,7 +303,8 @@ db_configs = {
             else:
                 storage.error(f"修改状态出错:{e.args}此时的数据是:{item}")
 ```
-数据保存
+#### 数据保存
+
 ```python
  async def save_data(self, item):
         try:
@@ -287,7 +315,8 @@ db_configs = {
         except Exception as e:
             storage.error(f"数据插入出错:{e.args}此时的item是:{item}")
 ```
-图片保存
+#### 图片保存
+
 ```python
 async def get_img(item, buff):
     # 题目层目录是否存在
